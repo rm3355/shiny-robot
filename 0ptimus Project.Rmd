@@ -1,0 +1,304 @@
+---
+title: "0ptimus Voter Turnout"
+author: "Rocio Meza"
+date: "April 11, 2017"
+output: pdf_document
+---
+
+```{r}
+#Loading Data + Naming File 
+library(readr)
+vf <- read_csv("~/Documents/Statistics/voterfile.csv")
+```
+
+
+# Logistic Regression (GLM) : Using Historical Voting Data 
+
+I chose to use the 2012 General Election data (vh12g) as the dependent variable in my logistic regression and made the past voting history as the indepdent variables. I chose the latest General Election in my data because past historical data is one of the *best* predictors of voter turnout. In addition, I chose the binomial family of error models along with its default identity (loggit). 
+
+*Assumptions Made for Logistic Regression*: 
+
+* Dependent variable is binary. 
+
+* Since logistic regression assumes that P(Y=1) is the probability of the event occurring, it is necessary that the dependent variable is coded accordingly.  That is, for a binary regression, the factor level 1 of the dependent variable should represent the desired outcome, which is correct in this case! 
+
+* The error terms need to be independent.
+
+* Logistic regression assumes linearity of independent variables and log odds.
+
+* Sample size has to be big enough. ML needs at least 10 cases per independent variable, some statisticians recommend at least 30 cases for each parameter to be estimated.
+
+In the results we see that 'vh02g' and 'vh02p'were not statistically significant.
+
+**It is important to note that I am using a considering anything significant as long as it's below the significane level of 0.05**
+```{r}
+# First Regression With ALL of Voting History before 2012 General Election 
+# Using 2012 General Election to predict 2014 General Election 
+
+Regression.1 <- glm(vf$vh12g ~ vf$vh12p + vf$vh10g + vf$vh10p + 
+                    vf$vh08g +	vf$vh08p + vf$vh06g + vf$vh06p + vf$vh04g + 	
+                    vf$vh04p + vf$vh02g + vf$vh02p + vf$vh00g + vf$vh00p, 
+                    family = binomial(link = "logit"))
+
+
+summary(Regression.1)
+```
+
+Next, I removed 'vh02g' and 'vh02p.' 
+
+In this example, we have a value of 57710 on 49999 degrees of freedom. Including the independent variables, decreased the deviance to 25861 points on 49988 degrees of freedom, a significant reduction in deviance.
+
+The Residual Deviance was reduced by **31849** with a loss of 11 degrees of freedom.
+```{r}
+#Remove 'vh02g' and 'vh02p'
+Regression.2 <- glm(vf$vh12g ~ vf$vh12p + vf$vh10g + vf$vh10p + 
+                      vf$vh08g +	vf$vh08p + vf$vh06g + vf$vh06p + vf$vh04g + 	
+                      vf$vh04p + vf$vh00g + vf$vh00p, 
+                    family = binomial(link = "logit"))
+summary(Regression.2)
+```
+
+Then, I considered adding the variables 'age' and 'party' into the glm. 
+
+Here we see that age IS significant to the model. However, Natural Law and Other parties 
+are NOT.
+
+In this example, we have a value of 57687 on 49982 degrees of freedom. Including the independent variables, decreased the deviance to 25599 points on 49963 degrees of freedom, a significant reduction in deviance.
+
+The Residual Deviance has reduced by **32088** with a loss of 19 degrees of freedom.
+
+```{r}
+#Including Age & Party into the Mix. 
+Regression.3 <- glm(vh12g ~ vh12p + vh10g + vh10p + 
+                      vh08g +	vh08p + vh06g + vh06p + vh04g + 	
+                      vh04p + vh00g + vh00p + age + factor(party), 
+                    family = binomial(link = "logit"), data = vf)
+
+summary(Regression.3)
+```
+
+Considering that some political parties had no statistical significance to the model, I decided to exclude 'party' to see if it would create a more fitted model. 
+
+'vh00p' was not proven to be significant in this model either. 
+
+For this example, we have a value of 57687 on 49982 degrees of freedom. Including the independent variables, decreased the deviance to 25624 points on 49970 degrees of freedom, a significant reduction in deviance.
+
+The Residual Deviance has reduced by **32063** with a loss of 12 degrees of freedom. It was not as great as the loss of the Residual Deviance (**32088**) of the previous model that INCLUDED 'party.' 
+```{R}
+#Including Age ONLY into the mix.  
+Regression.4 <- glm(vh12g ~ vh12p + vh10g + vh10p + 
+                      vh08g +	vh08p + vh06g + vh06p + vh04g + 	
+                      vh04p + vh00g + vh00p + age, 
+                    family = binomial(link = "logit"), data = vf)
+
+
+summary(Regression.4)
+```
+
+At the end, I chose to create a model that would exclude vh00p, 'vh02g', and 'vh02p.' It included the rest of the voting histories, age, and party. 
+
+For this example, we have a value of 57687 on 49982 degrees of freedom. Including the independent variables, decreased the deviance to 25599 points on 49964 degrees of freedom, a significant reduction in deviance.
+
+The Residual Deviance has reduced by **32088** with a loss of 18 degrees of freedom. This model has the highest reduction of residual deviance. 
+```{r}
+#Our Choice - 
+Regression.5 <- glm(vh12g ~ vh12p + vh10g + vh10p + 
+                      vh08g +	vh08p + vh06g + vh06p + vh04g + 	
+                      vh04p + vh00g + age + factor(party), 
+                    family = binomial(link = "logit"), data = vf)
+summary(Regression.5)
+```
+
+# Code for Predicting Turnout for Each Indvidual 
+```{r}
+#Creating Column with Predictions 
+vf$vote_prob <- predict(Regression.5, vf, type="response")
+#vf$vote_prob
+
+#Creating Column that show '1' or '0' for Will Vote or Will NOT Vote (as numeric/not character)
+vf$vote <- ifelse(vf$vote_prob >= 0.5,"1","0") 
+vf$vote <- as.numeric(vf$vote)
+```
+
+*Exporting to CSV file*
+```{r}
+write.csv(vf, file = "~/Documents/Statistics/vf.csv", row.names = FALSE)
+```
+
+#Interpreting Results 
+
+**Considering that 0ptimus frequently works with Republicans and some Democrats, I have decided to focus on these two parties, but also to include information about other parties as well.**
+
+First I examine my 'vote' column, which has either an '0' or '1'. It turns out that it has NA's, which is okay in this case, because table() ignores NA's. Then I calculate the proportion of Voters and Non-Voters. In this sample of 49983 total registered voters, my model predicted that appoximately *27%* of registered voters will vote in the 2014 General Election, while approximately *73%* will not. 
+```{r}
+table(vf$vote14)
+#Checking for NA because the table does not equal to 5,000
+any(is.na(vf$vote))
+
+Total <- 49983
+
+Proportion.Voters <- 13262/ Total 
+Proportion.Voters
+Proportion.NonVoters <- 36721/ Total 
+Proportion.NonVoters
+```
+
+I simply made frequency/margin/proportion tables to explore the number of voters who will cast their ballot for the 2014 General Election for each party. 
+
+As we can see, if it was only democrats vs. republicans, the republican candidates would get more votes. However, we see a large number of registered non-partisan people who plan to vote (1255). 
+
+If the model goes as predicted, the democrats would need to gain the support of all the non-partisan voters who are predicted to vote and votes from other political parties. In other words, the democrats would need more than 1279 votes to win.  
+
+**This is a hypothetical. There are 1,424,417 registered voters in Nevada. Therefore, I have included the project number of votes in my slide using statistics from Office of Nevada Secretary of State Ross Miller - May 2014 Voter Registration Statistics.**
+```{r}
+#Looking at Voters/Non-Votes for Party 
+mytable.party <- table(vf$party, vf$vote) # A is row, B is columns 
+mytable.party
+
+margin.table(mytable.party, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.party, 1) # row percentages 
+# Within each party, republicans have the highest predicted turnout. 
+```
+
+I decided to explore Age vs. Party. I created a boxplot for a visual representation of the data. Those in quartiles 2 & 3 for Democrats were around 37 - 65 years old, while Republicans had voters around 42 - 67. 
+```{r}
+#Age vs. Party Boxplot 
+library(ggplot2)
+p <- ggplot(vf, aes(party, age))
+p + geom_boxplot() + coord_flip()
+```
+
+I created bar plots for dwelling type, marital status, networth, ethnicity, homeowner status, and congressional district. I filled in the bars with party affiliations. I also accompanied the plots with frequency/margin/proportion tables.
+
+Results Summary: 
+
+* Single family dwellings are primarily made up of republicans and democrats. 
+
+* Republican and Democratic voters are mainly found in the $100000-249999 and $250000-499999 income brackets. 
+
+* Most registered voters are European. The second largest ethnicity is Hispanic. In the Hispanic group, the majority are Democrats: 
++ 53% are Dem
++ 22% are Non-Partisan 
++ 20% are Rep
+
+* The majority of married registered voters are Republicans 
+
+
+* Both Democrats and Republicans are almost equally likely to be homeowners.
+
+* District 2 has the highest number of Republicans. District 4 has the highest number of Democrats. 
++ District 1 has more Dems (50%)
++ District 2 has more Rep (32%)
++ District 3 has more Dem (37%) & about (36%) Rep 
++ District 4 has more Dem (53%)
+
+```{r}
+#Dwelling Type vs. Party
+qplot(factor(dwellingtype), data=vf, geom="bar", fill=factor(party))
+mytable.dwelling<- table(vf$party, vf$dwellingtype) # A is row, B is columns 
+mytable.dwelling
+
+margin.table(mytable.dwelling, 2) # A frequencies (summed over B) 
+
+prop.table(mytable.dwelling, 1) # row percentages 
+```
+
+```{r}
+# NetWorth vs. Party 
+qplot(factor(net_worth), data=vf, geom="bar", fill=factor(party))
+mytable.networth<- table(vf$party, vf$net_worth) # A is row, B is columns 
+mytable.networth
+
+margin.table(mytable.networth, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.networth, 1) # row percentages 
+
+```
+
+```{r}
+#Ethnicity vs. Party 
+qplot(factor(ethnicity), data=vf, geom="bar", fill=factor(party))
+mytable.ethnicity <- table(vf$party, vf$ethnicity) # A is row, B is columns 
+mytable.ethnicity
+
+margin.table(mytable.ethnicity, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.ethnicity, 1) # row percentages 
+
+#Digging Deeper in Hispanic Population 
+# Hispanic Only dataset
+df <- vf[vf$ethnicity == "Hispanic",] 
+mytable.hispanic <- table(df$party, df$ethnicity)
+mytable.hispanic
+prop.table(mytable.hispanic, 2)
+```
+
+
+```{r}
+#Marital Status vs. Party 
+qplot(factor(maritalstatus), data=vf, geom="bar", fill=factor(party))
+mytable.marital <- table(vf$party, vf$maritalstatus) # A is row, B is columns 
+mytable.marital
+
+margin.table(mytable.marital, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.marital, 1) # row percentages 
+```
+
+```{r}
+# Homeowner status vs. Party
+qplot(factor(home_owner_or_renter), data=vf, geom="bar", fill=factor(party))
+mytable.home <- table(vf$party, vf$home_owner_or_renter) # A is row, B is columns 
+mytable.home
+
+margin.table(mytable.home, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.home, 1) # row percentages 
+```
+
+```{r}
+# Congressional District vs. Party
+qplot(factor(cd), data=vf, geom="bar", fill=factor(party))
+mytable.cd <- table(vf$party, vf$cd) # A is row, B is columns 
+mytable.cd
+
+margin.table(mytable.cd, 1) # A frequencies (summed over B) 
+
+prop.table(mytable.cd, 2) # column percentages 
+```
+
+**Non-partisan voters**
+We see that the average non-partisan voter is 
+
+* European 
+
+* Lives in Single Family Dwelling Unit
+
+* Almost equally scattered in all 4 districts 
+
+* More likely married than non-traditional 
+
+* Making between $100,000-249,999
+```{r}
+#Digging Deeper in Non-partisan populations
+# creating dataset with only non-part. voters 
+df <- vf[vf$party == "Non-Partisan",] 
+mytable.np <- table(df$party, df$ethnicity)
+#Proportions across ethnicites 
+prop.table(mytable.np, 1)
+#Proportions across dwelling 
+mytable.np1 <- table(df$party, df$dwellingtype) 
+prop.table(mytable.np1, 1) 
+#Proportions across Congressional District 
+mytable.np2 <- table(df$party, df$cd) 
+prop.table(mytable.np2, 1) 
+#Proportions across marital status
+mytable.np2 <- table(df$party, df$maritalstatus) 
+prop.table(mytable.np2, 1) 
+#Proportions across networth
+mytable.np2 <- table(df$party, df$net_worth) 
+prop.table(mytable.np2, 1) 
+```
+
+
