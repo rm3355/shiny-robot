@@ -1,0 +1,61 @@
+---
+title: "Untitled"
+author: "Rocio Meza"
+date: "April 11, 2017"
+output: ioslides_presentation
+font: smaller
+---
+
+<style type="text/css"> body, td { font-size: 5px; } code.r{ font-size: 10px; } pre { font-size: 5px } </style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include=FALSE}
+library(readr)
+vf <- read_csv("~/Documents/Statistics/voterfile.csv")
+Regression.5 <- glm(vh12g ~ vh12p + vh10g + vh10p + 
+                      vh08g +	vh08p + vh06g + vh06p + vh04g + 	
+                      vh04p + vh00g + age + factor(party), 
+                    family = binomial(link = "logit"), data = vf)
+
+vf$vote_prob <- predict(Regression.5, vf, type="response")
+#vf$vote_prob
+
+#Creating Column that show '1' or '0' for Will Vote or Will NOT Vote (as numeric/not character)
+vf$vote <- ifelse(vf$vote_prob >= 0.5,"1","0") 
+vf$vote <- as.numeric(vf$vote)
+
+mytable.party <- table(vf$party, vf$vote) # A is row, B is columns 
+mytable.party
+
+margin.table(mytable.party, 1) # A frequencies (summed over B) 
+```
+
+## R Markdown
+{ font-size: 5px; }
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Prediction 
+Using a Generalized Linear Model and a sample of 5,000 registered votes, I was able to predict the voter turnout (projected to vote or not) for the 2014 General Election in Nevada. 
+
+In my sample, my model predicted that appoximately *27%* of registered voters will vote in the 2014 General Election, while approximately *73%* will not. Below we can see the percentages of those will vote (1) for each political party. 
+```{r chunk_name, echo=FALSE}
+prop.table(mytable.party, 1) # row percentages 
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
