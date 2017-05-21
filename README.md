@@ -1,2 +1,2 @@
 # shiny-robot
-CU grad. Chicago. Interested in Tech. Passionate about Policy 
+This is just a project I did on polling data for Nevada. 
